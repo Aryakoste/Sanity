@@ -1,0 +1,93 @@
+import {test,expect} from '@playwright/test';
+import {mkdir} from 'node:fs/promises';
+test.beforeEach(async({page})=>{await page.goto('./');await expect(page.getByRole('heading',{name:'Let’s make things last.'})).toBeVisible();await expect(page.locator('.app-shell')).toHaveAttribute('data-ready','true');});
+
+test('library renders without errors, search and filters work, desktop screenshot',async({page})=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await expect(page.locator('.guide-card')).toHaveCount(6);
+  await mkdir('output/screenshots',{recursive:true});
+  await page.screenshot({path:'output/screenshots/01-discover-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Bags',exact:true}).click();
+  await expect(page.locator('.guide-card')).toHaveCount(2);
+  await page.getByRole('button',{name:'All repairs',exact:true}).click();
+  await page.getByRole('searchbox',{name:'Search repairs'}).fill('button');
+  await expect(page.locator('.guide-card')).toHaveCount(2);
+  await page.getByRole('searchbox').fill('not a real repair');
+  await expect(page.getByRole('heading',{name:'No repairs found just yet.'})).toBeVisible();
+  await page.getByRole('button',{name:'Clear filters'}).click();
+  await expect(page.locator('.guide-card')).toHaveCount(6);
+  await page.getByRole('button',{name:'20 minutes or less'}).click();
+  await expect(page.locator('.guide-card')).toHaveCount(3);
+  expect(errors).toEqual([]);
+});
+
+test('planner, checklist, reload persistence, completion, impact and export',async({page})=>{
+  await page.getByRole('button',{name:'Find my repair',exact:true}).click();
+  await page.getByRole('button',{name:'15 minutes',exact:true}).click();
+  await page.getByRole('checkbox',{name:/Sewing needle/}).check();
+  await page.getByRole('checkbox',{name:/Scissors/}).check();
+  await expect(page.getByText('You have the tools')).toBeVisible();
+  await expect(page.locator('.match-card')).toHaveCount(1);
+  await page.screenshot({path:'output/screenshots/02-planner-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Make this my plan'}).click();
+  const dialog=page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button',{name:'Mark repaired'})).toBeDisabled();
+  await expect(dialog.getByRole('link',{name:/Open the full illustrated guide/})).toHaveAttribute('href',/ifixit\.com/);
+  await dialog.getByRole('checkbox',{name:'Find the right spot'}).check();
+  await page.screenshot({path:'output/screenshots/03-repair-checklist.png'});
+  await page.getByRole('button',{name:'Close dialog'}).click();
+  await page.reload();
+  await page.getByRole('button',{name:/My repair shelf/}).click();
+  await expect(page.getByText('1 of 4 steps done')).toBeVisible();
+  await page.getByRole('button',{name:'Continue repair'}).click();
+  await expect(dialog.getByRole('checkbox',{name:'Find the right spot'})).toBeChecked();
+  for(const name of ['Thread your needle','Secure the button','Tie off and test']) await dialog.getByRole('checkbox',{name}).check();
+  await dialog.getByLabel(/Approximate item weight/).fill('250');
+  await dialog.getByRole('button',{name:'Mark repaired'}).click();
+  await expect(dialog.getByText('One more good thing kept in use.')).toBeVisible();
+  await page.getByRole('button',{name:'Close dialog'}).click();
+  await page.getByRole('button',{name:'My impact',exact:true}).click();
+  await expect(page.locator('.impact-stats article').nth(0).locator('strong')).toHaveText('1');
+  await expect(page.locator('.impact-stats article').nth(1).locator('strong')).toHaveText('0.25 kg');
+  await expect(page.locator('.toast')).not.toHaveClass(/visible/);
+  await page.screenshot({path:'output/screenshots/04-impact-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:/My repair shelf/}).click();
+  await page.getByRole('button',{name:'Completed',exact:true}).click();
+  await expect(page.locator('.saved-card')).toHaveCount(1);
+  const downloadPromise=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Export journal'}).click();
+  const download=await downloadPromise;expect(download.suggestedFilename()).toBe('mend-my-repairs.json');
+  await page.getByRole('button',{name:/Remove Bring back a missing button from shelf/}).click();
+  await expect(page.getByRole('dialog',{name:'Remove repair plan'})).toBeVisible();
+  await page.getByRole('button',{name:'Keep it',exact:true}).click();
+  await expect(page.locator('.saved-card')).toHaveCount(1);
+});
+
+test('mobile navigation, layout and dialog keyboard behavior',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await expect(page.locator('.sidebar')).not.toBeInViewport();
+  await page.screenshot({path:'output/screenshots/05-discover-mobile.png',fullPage:true});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.getByRole('button',{name:'Open navigation'}).click();
+  await page.getByRole('button',{name:'Repair planner',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Start with what you have.'})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.getByRole('button',{name:'Home textiles',exact:true}).click();
+  await page.getByRole('button',{name:'15 minutes',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Give this repair a little more time.'})).toBeVisible();
+  await page.getByRole('button',{name:'Try 30 minutes',exact:true}).click();
+  await page.getByRole('button',{name:'Make this my plan'}).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('corrupt local storage is handled safely',async({page})=>{
+  await page.evaluate(()=>localStorage.setItem('mend.repairs.v1','{broken json'));
+  await page.reload();
+  await expect(page.locator('.app-shell')).toHaveAttribute('data-ready','true');
+  await expect(page.getByRole('alert')).toContainText('saved browser data');
+  await page.getByRole('button',{name:'My impact',exact:true}).click();
+  await expect(page.locator('.impact-stats article').first().locator('strong')).toHaveText('0');
+});

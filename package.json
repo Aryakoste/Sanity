@@ -1,0 +1,48 @@
+{
+  "name": "mend-repair-companion",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/astro.mjs dev --host 127.0.0.1",
+    "build": "node scripts/astro.mjs build",
+    "preview": "node scripts/astro.mjs preview --host 127.0.0.1",
+    "check": "node scripts/astro.mjs check",
+    "test": "tsx --test tests/planner.test.ts",
+    "test:e2e": "playwright test",
+    "sanity:seed": "node --env-file-if-exists=.env scripts/seed.mjs",
+    "sanity:verify": "node --env-file-if-exists=.env scripts/verify-sanity.mjs",
+    "studio": "sanity dev --host localhost",
+    "studio:build": "sanity build studio-dist --yes",
+    "build:pages": "node scripts/build-pages.mjs"
+  },
+  "dependencies": {
+    "@astrojs/react": "^7.0.0",
+    "@fontsource/dm-sans": "^5.2.0",
+    "@fontsource/manrope": "^5.2.0",
+    "@sanity/client": "^7.12.0",
+    "astro": "^7.3.5",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.56.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "sanity": "^5.14.1",
+    "styled-components": "^6.5.3"
+  },
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "overrides": {
+    "adm-zip": "^0.6.1",
+    "js-yaml@<4": "^3.15.2",
+    "uuid@<11.1.1": "^11.1.1"
+  }
+}

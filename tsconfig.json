@@ -1,0 +1,5 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": { "jsx": "react-jsx", "resolveJsonModule": true },
+  "exclude": ["dist", "studio-dist", "node_modules", ".sanity", "playwright-report", "test-results", "output"]
+}

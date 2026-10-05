@@ -1,0 +1,12 @@
+node_modules/
+.astro/
+.sanity/
+.env
+.env.*
+!.env.example
+dist/
+studio-dist/
+playwright-report/
+test-results/
+.sites-runtime/
+*.zip
