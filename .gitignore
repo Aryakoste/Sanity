@@ -4,9 +4,4 @@ node_modules/
 .env
 .env.*
 !.env.example
-dist/
-studio-dist/
-playwright-report/
-test-results/
-.sites-runtime/
 *.zip
